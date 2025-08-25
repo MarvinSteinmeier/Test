@@ -1,6 +1,6 @@
-QT += core +qml quick + import Felgo 3.0
+QT = core
 
-CONFIG += c++17 cmdline
+CONFIG += c++17 cmdline + felgo
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -10,6 +10,9 @@ SOURCES += \
         automobil_daten.cpp \
         main.cpp \
         sqlite3.c
+
+RESOURCES +=\
+            main.qml
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -21,4 +24,6 @@ HEADERS += \
     funktionen.h \
     sqlite3.h
 
+DISTFILES += \
+    main.qml
 

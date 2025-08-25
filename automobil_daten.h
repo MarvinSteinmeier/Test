@@ -1,11 +1,11 @@
-#ifndef AUTOMOBIL_DATEN_H
-#define AUTOMOBIL_DATEN_H
+#ifndef Automobile_Daten_H
+#define Automobile_Daten_H
 
 #include <QObject>
 #include <qstring.h>
 #include "sqlite3.h"
 
-struct Automobil_Daten{
+struct Automobile_Daten{
     QString Manufacturer;
     QString CarModell;
     QString CarModellVersion;
@@ -16,18 +16,21 @@ struct Automobil_Daten{
 
 };
 
-class Automobil_DatenDB
+class Automobile_DatenDB
 {
 public:
-    Automobil_DatenDB(const QString &dbPath);
-    ~Automobil_DatenDB();
+    Automobile_DatenDB(const QString &dbPath);
+    ~Automobile_DatenDB();
 
     bool init();
-    bool insertManufactuererData(const Automobil_Daten &am_d);
+    bool insertManufactuererData(const Automobile_Daten &am_d);
     bool importFromCSV(const QString &csvPath);
-    QVector<Automobil_Daten> getAllAutomobilData();
+    QVector<Automobile_Daten> getAllAutomobilData();
+    bool removeDuplicateData(const QString &db_path);
+
+
 private:
     sqlite3 *db;
 };
 
-#endif // AUTOMOBIL_DATEN_H
+#endif // Automobile_Daten_H

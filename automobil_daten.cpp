@@ -1,22 +1,22 @@
-#include "automobil_daten.h"
+#include "Automobil_Daten.h"
 #include <QDebug>
 #include <QFile>
 #include <QTextStream>
 #include "sqlite3.h"
 
-Automobil_DatenDB::Automobil_DatenDB(const QString &dbPath) {
+Automobile_DatenDB::Automobile_DatenDB(const QString &dbPath) {
     if(sqlite3_open(dbPath.toUtf8().constData(), &db) != SQLITE_OK){
         qDebug() << "Error while Loading Database: " <<sqlite3_errmsg(db);
         db = nullptr;
     }
 }
 
-Automobil_DatenDB::~Automobil_DatenDB(){
+Automobile_DatenDB::~Automobile_DatenDB(){
     if(db)sqlite3_close(db);
 }
 
-bool Automobil_DatenDB::init(){
-    const char *sqlcreate = R"(CREATE TABLE IF NOT EXISTS person (
+bool Automobile_DatenDB::init(){
+    const char *sqlcreate = R"(CREATE TABLE IF NOT EXISTS AutomobilDatenDB (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             Manufacturer TEXT,
             CarModell TEXT,
@@ -39,8 +39,13 @@ bool Automobil_DatenDB::init(){
     return true;
 }
 
-bool Automobil_DatenDB::insertManufactuererData(const Automobil_Daten &am_d){
-    const char *sql = "Insert Manufacturer: ";
+bool Automobile_DatenDB::insertManufactuererData(const Automobile_Daten &am_d){
+    const char *sql = R"(
+      INSERT INTO AutomobilDatenDB (
+          Manufacturer, CarModell, CarModellVersion,
+         FillingQuantitity, OilTyp, OilVisk, Version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+    )";
     sqlite3_stmt *stmt;
     if(sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK){
         return false;
@@ -59,24 +64,26 @@ bool Automobil_DatenDB::insertManufactuererData(const Automobil_Daten &am_d){
 
 }
 
-bool Automobil_DatenDB::importFromCSV(const QString &csvPath){
+bool Automobile_DatenDB::importFromCSV(const QString &csvPath){
     QFile file(csvPath);
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
-
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
+        qDebug() << "Fehler beim Öffnen der Datei!";
+        return false;
+    }
     QTextStream in(&file);
     while(!in.atEnd()){
         QString line = in.readLine();
-        QStringList parts = line.split(',');
-        if(parts.size() !=26) continue;
 
-        Automobil_Daten data_am;
+        QStringList parts = line.split(';');
+        if(parts.size() !=25) continue;
+        Automobile_Daten data_am;
         data_am.Manufacturer = parts[0].trimmed();
         data_am.CarModell =parts[1].trimmed();
         data_am.CarModellVersion =parts[2].trimmed();
         data_am.fillingQuantity = parts[8].trimmed();
-        data_am.OilTyp = parts[10].trimmed();
+        data_am.OilTyp = parts[9].trimmed();
         data_am.OilVisk = parts[11].trimmed();
-        data_am.Version=parts[25].trimmed();
+        data_am.Version=parts[24].trimmed();
         insertManufactuererData(data_am);
 
     }
@@ -84,10 +91,14 @@ bool Automobil_DatenDB::importFromCSV(const QString &csvPath){
 
 }
 
-QVector<Automobil_Daten> Automobil_DatenDB::getAllAutomobilData(){
+QVector<Automobile_Daten> Automobile_DatenDB::getAllAutomobilData(){
 
-    QVector<Automobil_Daten> list;
-    const char *sql = "SELECT Manufacturer , ....";
+    QVector<Automobile_Daten> list;
+    const char *sql = R"(
+    SELECT Manufacturer, CarModell, CarModellVersion,
+           FillingQuantitity, OilTyp, OilVisk, Version
+            FROM AutomobilDatenDB;
+    )";
     sqlite3_stmt *stmt;
 
     if(sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK){
@@ -95,7 +106,7 @@ QVector<Automobil_Daten> Automobil_DatenDB::getAllAutomobilData(){
     }
 
     while(sqlite3_step(stmt) == SQLITE_ROW){
-        Automobil_Daten data_am;
+        Automobile_Daten data_am;
         data_am.Manufacturer = reinterpret_cast <const char*>(sqlite3_column_text(stmt,0));
         data_am.CarModell = reinterpret_cast <const char*>(sqlite3_column_text(stmt,1));
         data_am.CarModellVersion = reinterpret_cast <const char*>(sqlite3_column_text(stmt,2));
@@ -109,4 +120,30 @@ QVector<Automobil_Daten> Automobil_DatenDB::getAllAutomobilData(){
 
     sqlite3_finalize(stmt);
     return list;
+}
+
+bool Automobile_DatenDB::removeDuplicateData(const QString &dbPath){
+    if(sqlite3_open(dbPath.toUtf8().constData(), &db) != SQLITE_OK){
+        qDebug() << "Error while Loading Database: " <<sqlite3_errmsg(db);
+        db = nullptr;
+    }
+
+    const char *sql = R"(DELTE FROM AutomobilDatenDB WHERE rowid NOT IN(
+            SELECT MIN(rowid) FROM AutomobilDatenDB
+            GROUP BY Manufactuer, CarModell
+        );
+    )";
+
+    char *errMSG = nullptr;
+    int rc = sqlite3_exec(db, sql, nullptr,nullptr, &errMSG);
+
+    if(rc!=SQLITE_OK){
+        qDebug() <<"Error while Loading Database: " <<errMSG;
+        sqlite3_free(errMSG);
+        return false;
+    }
+    qDebug() << "Duplicates were deleted!";
+    return true;
+
+
 }
