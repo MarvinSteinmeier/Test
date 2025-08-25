@@ -1,4 +1,4 @@
-QT = core
+QT += core +qml quick + import Felgo 3.0
 
 CONFIG += c++17 cmdline
 
@@ -20,4 +20,5 @@ HEADERS += \
     automobil_daten.h \
     funktionen.h \
     sqlite3.h
+
 
